@@ -357,6 +357,21 @@
             "properties": {
               "receipt_id": {
                 "type": "integer"
+              },
+              "observed_transfer_id": {
+                "type": [
+                  "null"
+                ]
+              },
+              "observed_tx_hash": {
+                "type": [
+                  "null"
+                ]
+              },
+              "observed_block_number": {
+                "type": [
+                  "null"
+                ]
               }
             }
           }

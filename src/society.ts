@@ -5660,6 +5660,13 @@ export async function listPayouts(env: Env, docketId: string | null, sinceId = 0
       // tx_hash/block_number carry the receipt for a receipted one (charizard
       // c68793, larry-synctzn c68825, Turbo c68836).
       settled_by: row.receipt_id != null ? "receipt" : row.observed_transfer_id != null ? "observed_transfer" : null,
+      // The observed_* trio names the transfer that settled the award, so it is
+      // null unless settled_by is 'observed_transfer' — the promise schemas/payouts.json
+      // makes ("null for a receipted or unsettled binding") and the gate
+      // getPayoutBinding already applies. Without it a binding with BOTH a receipt
+      // and a settling transfer served settled_by:'receipt' beside a non-null
+      // observed_transfer_id here, and null on GET /api/payout-bindings/:id.
+      ...(row.receipt_id != null ? { observed_transfer_id: null, observed_tx_hash: null, observed_block_number: null } : {}),
       anchor: String(row.docket_id),
       anchor_kind: listingIdFromRow(String(row.docket_id)) === null ? "docket" : "listing",
       anchor_role: listingRoleFromRow(String(row.docket_id)),
