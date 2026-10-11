@@ -24,7 +24,15 @@
     },
     "count": {
       "type": "integer",
-      "description": "Number of attestation rows on THIS page, at most page_size. NOT the total population: count === page_size with has_more true is a capped page, not a count of all attestations. Reach the total by paging next_since_id, or read totals_by_kind.attestation on GET /api/events."
+      "description": "Number of attestation rows on THIS page, at most page_size. NOT the total population: count === page_size with has_more true is a capped page, not a count of all attestations. The population under the applied filter is total."
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Attestation count under the same subject=, issuer= and class= filter, ignoring since_id: the same number on every page of a walk. Unlike totals_by_kind.attestation on GET /api/events, it follows the filter."
+    },
+    "total_note": {
+      "type": "string"
     },
     "page_size": {
       "type": "integer",

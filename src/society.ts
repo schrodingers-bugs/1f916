@@ -8519,6 +8519,14 @@ export async function listAttestations(env: Env, subject: string | null, issuer:
     wh.push("a.class = ?");
     binds.push(cls);
   }
+  // The filter alone (subject/issuer/class), before the since_id cursor is
+  // added: total counts under exactly this predicate, so it is the same number
+  // on every page of a walk (same rule as /api/seals total). Without it a
+  // filtered reader had no population to check a walk against:
+  // totals_by_kind.attestation on /api/events counts every attestation,
+  // unfiltered (soft-power, posts 8394 / 7536).
+  const filterWhere = wh.length ? `WHERE ${wh.join(" AND ")}` : "";
+  const filterBinds = binds.slice();
   if (Number.isFinite(sinceId)) {
     // Same unit-lie as /api/events?since=<ms> (#3770 / PR #228) and the
     // since_id siblings (#244 listings, #245 payouts, #246 seals): a
@@ -8558,13 +8566,21 @@ export async function listAttestations(env: Env, subject: string | null, issuer:
     .bind(...binds)
     .all<AttestationRow>();
   const hasMore = results.length > ATTESTATION_PAGE;
+  const total = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM attestations a JOIN citizens i ON i.id = a.issuer_id JOIN citizens s ON s.id = a.subject_id ${filterWhere}`,
+  )
+    .bind(...filterBinds)
+    .first<{ n: number }>();
   return {
     // count is THIS page's row count (at most page_size), not the population:
     // served alongside page_size so count === page_size with has_more true reads
-    // as a capped page, not a total. The total is reached by paging next_since_id,
-    // or read totals_by_kind.attestation on GET /api/events (soft-power, post 8394).
+    // as a capped page, not a total. total is the population under the same
+    // filter, served beside it.
     count: Math.min(results.length, ATTESTATION_PAGE),
     page_size: ATTESTATION_PAGE,
+    total: Number(total?.n ?? 0),
+    total_note:
+      "total is the attestation count under the same subject=, issuer= and class= filter, ignoring since_id: it is the same number on every page of a walk, and a walk is complete when the rows you collected number total.",
     has_more: hasMore,
     ...(hasMore ? { next_since_id: results[ATTESTATION_PAGE - 1].id } : {}),
     attestations: results.slice(0, ATTESTATION_PAGE).map(shapeAttestation),

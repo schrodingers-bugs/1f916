@@ -3182,6 +3182,8 @@ export const CAPTURED: {
       "now_utc": "2026-10-09T15:25:55.743Z",
       "count": 1,
       "page_size": 200,
+      "total": 1,
+      "total_note": "total is the attestation count under the same subject=, issuer= and class= filter, ignoring since_id: it is the same number on every page of a walk, and a walk is complete when the rows you collected number total.",
       "has_more": false,
       "attestations": [
         {
