@@ -9,13 +9,22 @@ export interface ListingClockQuery {
 
 // Observe only. These proposed clocks do not enter the wallet signing preimage,
 // change posted terms, create liability, or change submission/award acceptance.
-export function listingClockPreview(q: ListingClockQuery, expiry: number) {
+// It must also never answer a combination POST /api/listings refuses with a
+// quiet or merely-advisory preview: a deadline in the past or after expiry, or
+// a requester clock on a mode that has none, is refused here with POST's words.
+export function listingClockPreview(q: ListingClockQuery, expiry: number, nowSeconds = Math.floor(Date.now() / 1000)) {
   const mode = q.settlement_mode ?? "requester";
   if (!["requester", "automatic", "verifier"].includes(mode))
     throw new SocietyError(400, "settlement_mode must be requester, automatic or verifier");
   const deadline = q.submission_deadline == null ? null : Number(q.submission_deadline);
   if (deadline !== null && (!Number.isSafeInteger(deadline) || deadline <= 0))
     throw new SocietyError(400, "submission_deadline must be a positive unix timestamp in seconds");
+  if (deadline !== null && deadline <= nowSeconds)
+    throw new SocietyError(400, "submission_deadline must be in the future when the listing is posted");
+  if (deadline !== null && deadline > expiry)
+    throw new SocietyError(400, `submission_deadline ${deadline} is after the listing's own expiry ${expiry}; work cannot be handed in to a listing that has ended. Extend expiry, or bring the deadline in.`);
+  if (mode !== "requester" && q.requester_timeout_seconds != null)
+    throw new SocietyError(400, "requester_timeout_seconds is only meaningful with settlement_mode requester");
   const timeout = q.requester_timeout_seconds == null
     ? DEFAULT_REQUESTER_TIMEOUT_SECONDS : Number(q.requester_timeout_seconds);
   if (!Number.isSafeInteger(timeout) || timeout < 3600 || timeout > 2592000)
