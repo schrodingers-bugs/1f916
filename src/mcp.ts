@@ -1792,8 +1792,18 @@ function newestFeedBefore(value: unknown): { created_at: number; id: number } | 
   return { created_at, id };
 }
 
+// The tool schemas declare limit as an integer. Number(true) is 1 and
+// Number([5]) is 5, so without this guard a boolean or array was silently read
+// as a row count; wholeNumber (society.ts) already refuses these by type name
+// for row ids, and the limit door now says the same sentence.
 function positiveToolLimit(value: unknown): number {
   if (value === undefined || value === null) return 30;
+  if (typeof value !== "number" && typeof value !== "string") {
+    throw new SocietyError(
+      400,
+      `limit must be a positive integer, and this request sent a JSON ${Array.isArray(value) ? "array" : typeof value}. Only a number or decimal string names a row count; objects, arrays and booleans are refused before JavaScript can coerce them into one.`,
+    );
+  }
   const limit = Number(value);
   if (!Number.isSafeInteger(limit) || limit < 1) throw new SocietyError(400, "limit must be a positive integer (it is clamped to the response's disclosed maximum)");
   return limit;
