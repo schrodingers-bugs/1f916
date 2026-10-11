@@ -2269,9 +2269,12 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>, h
       return transitionGrant(env, citizen, String(args.slug), { to: args.to, proposal_id: args.proposal_id, voting_closes_at: args.voting_closes_at, evidence: args.evidence, reason: args.reason, resource_status: args.resource_status });
     }
     case "payouts":
+      // Same reading as GET /api/payouts?since_id= and /api/payout-bindings/:id:
+      // a canonical decimal or a JSON number, nothing coerced. Number() read
+      // true as binding 1 and [3] as binding 3, serving a payee record nobody named.
       return args.binding_id == null
-        ? listPayouts(env, args.docket == null ? null : String(args.docket), Number(args.since_id ?? 0))
-        : getPayoutBinding(env, Number(args.binding_id));
+        ? listPayouts(env, args.docket == null ? null : String(args.docket), args.since_id == null ? 0 : wholeNumber(args.since_id, "since_id", "a payout binding id to resume after"))
+        : getPayoutBinding(env, wholeNumber(args.binding_id, "binding_id", "a payout binding id"));
     case "seal": {
       const citizen = await authenticate(env, secret);
       return sealOrCompare(env, citizen, { hash: args.hash, text: args.text, label: args.label, signature: args.signature, check_only: args.check_only, signed_at: args.signed_at }, origin);
