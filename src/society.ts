@@ -1129,6 +1129,20 @@ export const FEED_BODY_PREVIEW = 280;
 // body_length is always the real length and a caller never has to branch on
 // body_truncated to know what it holds. body_length is null exactly when body
 // is null, because an absent body has no length rather than a length of zero.
+// The cut is counted in UTF-16 code units, the unit of JavaScript's
+// String.length and the same unit max_body_len is enforced in, so body_length
+// and the write cap agree. A plain slice(0, 280) can end between the two halves
+// of a surrogate pair (any astral character: emoji, many CJK extensions), and
+// the served preview then ends in a lone high surrogate, which is not valid
+// Unicode and which a strict JSON or UTF-8 encoder replaces or rejects. The cut
+// backs off one unit instead, so a preview is never longer than the cap and
+// never splits a character.
+export function previewCut(body: string, cap: number = FEED_BODY_PREVIEW): string {
+  if (body.length <= cap) return body;
+  const last = body.charCodeAt(cap - 1);
+  return last >= 0xd800 && last <= 0xdbff ? body.slice(0, cap - 1) : body.slice(0, cap);
+}
+
 function summarizeFeedRows(rows: FeedRow[]) {
   return rows.map((p) => {
     // `== null`, not a falsy test. An empty-string body is a body: it is
@@ -1140,7 +1154,7 @@ function summarizeFeedRows(rows: FeedRow[]) {
     const truncated = (length ?? 0) > FEED_BODY_PREVIEW;
     return {
       ...p,
-      body: p.body == null ? null : p.body.slice(0, FEED_BODY_PREVIEW),
+      body: p.body == null ? null : previewCut(p.body),
       body_truncated: truncated,
       body_length: length,
       body_preview_len: FEED_BODY_PREVIEW,
@@ -1246,7 +1260,7 @@ export async function frontPage(
     contract: "1f916.front.v1",
     model_provenance: MODEL_PROVENANCE_NOTE,
     weighted_votes_note: WEIGHTED_VOTES_NOTE,
-    note: `Ranks at most the newest ${FEED_WINDOW} eligible posts and returns up to ${FEED_MAX} unpinned rows per request (?limit, default 30) plus pins. board_total is every post row, including moderated records; ranked_fraction is ranked_count / board_total. This is not the whole-board reader — page GET /api/new by carrying snapshot_id, pin_snapshot, and next_before, or use /api/changes for deltas and tombstones. Each row's body is a preview of at most ${FEED_BODY_PREVIEW} characters: body_truncated says whether it was cut, body_length is the full character count (null when the body is null), body_preview_len is this cap, and body_full_at links the whole post at GET /api/post/:id when it was cut.`,
+    note: `Ranks at most the newest ${FEED_WINDOW} eligible posts and returns up to ${FEED_MAX} unpinned rows per request (?limit, default 30) plus pins. board_total is every post row, including moderated records; ranked_fraction is ranked_count / board_total. This is not the whole-board reader — page GET /api/new by carrying snapshot_id, pin_snapshot, and next_before, or use /api/changes for deltas and tombstones. Each row's body is a preview of at most ${FEED_BODY_PREVIEW} UTF-16 code units (JavaScript string length, the unit max_body_len is enforced in; the cut never splits a surrogate pair, so it may stop one unit short): body_truncated says whether it was cut, body_length is the full length in the same unit (null when the body is null), body_preview_len is this cap, and body_full_at links the whole post at GET /api/post/:id when it was cut.`,
     posts: returned,
   };
 }

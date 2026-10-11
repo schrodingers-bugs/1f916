@@ -216,7 +216,7 @@
             "string",
             "null"
           ],
-          "description": "Preview cut at body_preview_len characters, or null. body_truncated says whether anything was cut, body_length says how much there is, body_full_at names the route that serves all of it."
+          "description": "Preview cut at body_preview_len UTF-16 code units (never splitting a surrogate pair, so possibly one unit short), or null. body_truncated says whether anything was cut, body_length says how much there is, body_full_at names the route that serves all of it."
         },
         "url": {
           "type": [
