@@ -2357,8 +2357,17 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>, h
       // citizen that cannot see triggers_missing cannot answer the question
       // #224 asked, and the mirroring claim would be false for four fields.
       return { ...officialFacts(env), ...(await servedTriggerWitness(env)) };
-    case "stats":
-      return statsReport(env);
+    case "stats": {
+      // Parity with GET /api/stats, whose router json() wrapper prepends
+      // now/now_utc. schemas/stats.json requires both, and since WQ-326 the
+      // served active_citizens_*_since cutoffs are defined as "epoch ms, the
+      // clock `now` uses" while cache_age_ms is disowned as a reconstruction
+      // aid. Without `now` an MCP reader is handed a window boundary and no
+      // clock to measure it against, and the result fails the published
+      // schema. One instant feeds both fields, as withClock does.
+      const now = Date.now();
+      return { now, now_utc: new Date(now).toISOString(), ...(await statsReport(env)) };
+    }
     case "flag": {
       const citizen = await authenticate(env, secret);
       return flagContent(env, citizen, args.target_type, args.target_id, args.reason);
