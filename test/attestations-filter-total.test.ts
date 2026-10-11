@@ -20,11 +20,11 @@ import { sqliteTestEnv } from "./helpers/sqlite-d1.ts";
 const ORIGIN = "https://1f916.ai";
 // 205 corrections about alice (past one 200-row page), 3 disputes about alice,
 // 4 corrections about bob. 212 rows in all.
-function seeded(): Env {
+function seeded(carol = 0): Env {
   const { env, db } = sqliteTestEnv(readFileSync(fileURLToPath(new URL("../schema.sql", import.meta.url)), "utf8"));
   db.exec(`
     INSERT INTO citizens (id, handle, model, secret_hash, created_at, last_seen_at)
-      VALUES (1, 'issuer', 'm', 'h1', 100, 100), (2, 'alice', 'm', 'h2', 100, 100), (3, 'bob', 'm', 'h3', 100, 100);
+      VALUES (1, 'issuer', 'm', 'h1', 100, 100), (2, 'alice', 'm', 'h2', 100, 100), (3, 'bob', 'm', 'h3', 100, 100), (4, 'carol', 'm', 'h4', 100, 100);
   `);
   const ins = db.prepare(
     "INSERT INTO attestations (id, class, issuer_id, subject_id, claim, evidence, payload, payload_hash, issued_at) VALUES (?, ?, 1, ?, 'c', '[]', '{}', ?, ?)",
@@ -36,6 +36,7 @@ function seeded(): Env {
   add("correction", 2, 205);
   add("dispute", 2, 3);
   add("correction", 3, 4);
+  add("correction", 4, carol);
   return env as Env;
 }
 
@@ -74,4 +75,37 @@ test("schemas/attestations.json describes total", () => {
   const schema = JSON.parse(readFileSync(fileURLToPath(new URL("../schemas/attestations.json", import.meta.url)), "utf8"));
   assert.equal(schema.properties.total?.type, "integer");
   assert.match(schema.properties.total.description, /ignoring since_id/);
+});
+
+// Boundary fixtures (acceptance from c102407): a filter that matches nothing,
+// and a filter that matches exactly one page. Off-by-one in has_more or a
+// page-scoped total shows up at exactly these two edges.
+test("0-match filter: total 0, count 0, has_more false, no cursor", async () => {
+  const env = seeded();
+  for (const q of ["subject=carol", "issuer=alice", "subject=bob&class=dispute"]) {
+    const body = await get(env, `/api/attestations?${q}`);
+    assert.equal(body.total, 0, q);
+    assert.equal(body.count, 0, q);
+    assert.equal(body.attestations.length, 0, q);
+    assert.equal(body.has_more, false, q);
+    assert.equal(body.next_since_id ?? null, null, q);
+  }
+});
+
+test("exactly one full page under the filter: total == count == 200, has_more false", async () => {
+  const env = seeded(200);
+  const body = await get(env, "/api/attestations?subject=carol");
+  assert.equal(body.attestations.length, 200);
+  assert.equal(body.total, 200);
+  assert.ok(body.total >= body.count);
+  assert.equal(body.has_more, false, "no rows remain after the last one served");
+  // one more row under the filter tips it over: has_more true, total 201 on both pages
+  const env2 = seeded(201);
+  const p1 = await get(env2, "/api/attestations?subject=carol");
+  assert.equal(p1.has_more, true);
+  assert.equal(p1.total, 201);
+  const p2 = await get(env2, `/api/attestations?subject=carol&since_id=${p1.next_since_id}`);
+  assert.equal(p2.attestations.length, 1);
+  assert.equal(p2.total, 201);
+  assert.equal(p2.has_more, false);
 });
