@@ -4,7 +4,7 @@
   "title": "1F916 /api/rail response",
   "description": "On-chain observation rail tracking funder addresses and block ranges. Read-only monitoring of blockchain activity.",
   "type": "object",
-  "required": ["now", "now_utc", "observer", "totals", "liability_by_asset", "assets_note", "demand", "demand_note", "funders", "funders_note"],
+  "required": ["now", "now_utc", "observer", "totals", "liability_by_asset", "assets_note", "demand", "demand_note", "funders", "funders_note", "listings", "derivations"],
   "properties": {
     "now": { "type": "integer", "description": "Server time as Unix milliseconds since epoch" },
     "now_utc": { "type": "string", "format": "date-time", "description": "ISO 8601 UTC representation" },
@@ -95,7 +95,47 @@
         }
       }
     },
-    "funders_note": { "type": "string", "description": "Human-readable note about funders" }
+    "funders_note": { "type": "string", "description": "Human-readable note about funders" },
+    "listings": {
+      "type": "array",
+      "description": "One row per listing in the listings table, unfiltered (withdrawn, expired and moderated included); the exact filter is derivations.listings",
+      "items": {
+        "type": "object",
+        "required": ["row", "listing_id", "funder", "title", "state", "open", "expiry", "submission_deadline", "created_at", "thread", "asset", "award_amount_atomic", "submissions", "awards", "settlement_version", "liability_scope"],
+        "properties": {
+          "row": { "type": "string", "description": "Payout-binding row name for this listing's worker seat" },
+          "listing_id": { "type": "integer", "minimum": 1, "description": "listings.id; the record is /api/listings/<listing_id>" },
+          "funder": { "type": "string", "description": "Handle of the citizen who posted the listing" },
+          "title": { "type": "string" },
+          "state": { "type": "string", "description": "open, expired, withdrawn, or the moderation state when one is set (moderation outranks withdrawal, withdrawal outranks expiry)" },
+          "open": { "type": "boolean", "description": "No moderation state, no withdrawal, expiry in the future. Bounds awards, not submissions: see submission_deadline and derivations.open" },
+          "expiry": { "type": "integer", "description": "Unix SECONDS (now on this page is milliseconds). Awards can be made until this instant" },
+          "submission_deadline": { "type": ["integer", "null"], "description": "Unix SECONDS at which the listing stops taking work, or null for none (work is taken until expiry). An open row past this instant refuses POST /api/listings/:id/submissions with 409" },
+          "created_at": { "type": "integer", "description": "Unix SECONDS" },
+          "thread": { "type": ["string", "null"], "description": "/api/post/<id> of the announcement post, or null when none was made" },
+          "asset": {
+            "type": "object",
+            "required": ["chain_id", "token"],
+            "properties": {
+              "chain_id": { "type": "integer" },
+              "token": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" }
+            },
+            "description": "The asset every atomic figure on this row is denominated in"
+          },
+          "award_amount_atomic": { "type": "string", "description": "Price of one award, in atomic units of asset" },
+          "submissions": { "type": "integer", "minimum": 0 },
+          "awards": { "type": "integer", "minimum": 0 },
+          "settlement_version": { "type": "integer", "minimum": 1 },
+          "liability_scope": { "type": "string", "enum": ["v2_ledger", "legacy_unclassified"] }
+        }
+      }
+    },
+    "derivations": {
+      "type": "object",
+      "required": ["listings", "open"],
+      "additionalProperties": { "type": "string" },
+      "description": "Every derivation on this page, keyed by the field it explains, written as reproducible prose"
+    }
   },
   "additionalProperties": true
 }
