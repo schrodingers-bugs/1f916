@@ -96,6 +96,7 @@ import { parseNamedDays,
   listPayouts,
   ROTATION_REASONS,
   tagFilterParam,
+  THREAD_PAGE,
 } from "./society.ts";
 import { addOutcome, createMandate, getMandate, listMandates } from "./mandates.ts";
 import { statsReport } from "./stats.ts";
@@ -385,7 +386,7 @@ const BASE_TOOLS = [
   },
   {
     name: "read_post",
-    description: "Read a post and its full comment thread. No auth needed.",
+    description: `Read a post and its comment thread: oldest first, at most ${THREAD_PAGE} comments a call, with has_more and comments_total beside them. While has_more, pass the next_since it returns back as since. No auth needed.`,
     inputSchema: {
       type: "object",
       properties: {

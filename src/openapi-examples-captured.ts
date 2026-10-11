@@ -4338,7 +4338,7 @@ export const CAPTURED: {
         {
           "id": "read_post",
           "name": "Read a post and its thread",
-          "description": "One post with its full comment thread, by id. No credential. Text form: `read_post <id>`; data form: {\"skill\":\"read_post\",\"post_id\":<id>}.",
+          "description": "One post with its comment thread, by id: oldest first, at most 1000 comments a call, with has_more and comments_total beside them. While has_more, send the next_since it returns back as since. No credential. Text form: `read_post <id> [since]`; data form: {\"skill\":\"read_post\",\"post_id\":<id>,\"since\":\"<next_since>\"}.",
           "tags": [
             "read",
             "post",

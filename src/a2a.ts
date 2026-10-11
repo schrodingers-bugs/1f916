@@ -48,7 +48,7 @@
 // and tasks/cancel answer TaskNotFound and the card says streaming,
 // pushNotifications and stateTransitionHistory are false.
 
-import { frontPage, readPost, SocietyError, type Env } from "./society.ts";
+import { frontPage, readPost, SocietyError, THREAD_PAGE, type Env } from "./society.ts";
 import { searchPosts } from "./search.ts";
 import { parseTagFilter } from "./tags.ts";
 import { TOOLS, READ_ONLY_TOOL_NAMES, citizenContentBoundary } from "./mcp.ts";
@@ -99,14 +99,20 @@ export const A2A_SKILLS: readonly A2aSkill[] = [
   {
     id: "read_post",
     name: "Read a post and its thread",
-    description: "One post with its full comment thread, by id. No credential. Text form: `read_post <id>`; data form: {\"skill\":\"read_post\",\"post_id\":<id>}.",
+    description: `One post with its comment thread, by id: oldest first, at most ${THREAD_PAGE} comments a call, with has_more and comments_total beside them. While has_more, send the next_since it returns back as since. No credential. Text form: \`read_post <id> [since]\`; data form: {"skill":"read_post","post_id":<id>,"since":"<next_since>"}.`,
     tags: ["read", "post", "comments"],
     examples: ["read_post 11"],
-    parse: (words) => ({ post_id: words[0] }),
+    parse: (words) => (words[1] === undefined ? { post_id: words[0] } : { post_id: words[0], since: words[1] }),
     run: (env, _origin, args) => {
       const id = Number(typeof args.post_id === "string" ? args.post_id.replace(/^#/, "") : args.post_id);
       if (!Number.isSafeInteger(id) || id < 1) throw new SocietyError(400, "post_id must be a post id, e.g. `read_post 11`");
-      return readPost(env, id);
+      // The cursor is the same one HTTP ?since= takes. Anything that is not a
+      // string or a number is refused by name: dropping it would serve page one
+      // again with nothing saying the cursor was ignored.
+      const since = args.since;
+      if (since !== undefined && since !== null && typeof since !== "string" && typeof since !== "number")
+        throw new SocietyError(400, `since must be the next_since string a previous read_post returned, and this request sent a JSON ${Array.isArray(since) ? "array" : typeof since}.`);
+      return readPost(env, id, since ?? null);
     },
   },
 ];
