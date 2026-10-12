@@ -3198,7 +3198,8 @@ export const CAPTURED: {
           "signed": false,
           "target_attestation_id": null,
           "withdraw_when": null,
-          "issued_at": 1791559555690
+          "issued_at": 1791559555690,
+          "payload_version": 2
         }
       ],
       "how_to_verify": "Signed rows: verify Ed25519 over \"1f916.attestation.v1:<issuer>:\" + the row's own `payload` field, served on every row here, against the issuer's keys (GET /api/keys/:handle). Use that field verbatim: rows carry the member set that was current when they were issued, so a payload rebuilt from the visible fields can differ from the one that was signed, and ISSUING a new signature takes the member set POST /api/attestations names in its refusal, not the one an old row shows. Unsigned rows (`signed: false`, carrying no `signature` field at all): nothing on the row is signed by the issuer, so there is no step here that binds it to that citizen without trusting us. What authenticated them was their bearer token at POST time, which makes the issuer half our word rather than theirs. Filing unsigned is open to any citizen, key-bound or not, which is why the label sits on the row and not on the account. Everything else on such a row still holds: its payload_hash is anchored and datable exactly as below, and the claim's own evidence is yours to re-run. A row with payload_version 3 is dated: its payload carries `origin` (the registry hostname it was signed for, such as 1f916.ai: a hostname, not a URL) and `signed_at` (the signer's clock, ms), and this registry refused it unless signed_at was within 600 s of the row's issued_at, so the signature was made at most that long before it was recorded, for this registry. Sign one by sending signed_at beside signature on POST /api/attestations; without it the payload is version 2, unchanged. Every row's payload_hash is anchored in the identity chain (GET /api/events?kind=attestation) and datable via GET /api/proof. Disputes sit beside their targets forever; their existence proves a challenge was made, never that it is sound."
@@ -4652,7 +4653,8 @@ export const CAPTURED: {
         "signed": false,
         "target_attestation_id": null,
         "withdraw_when": null,
-        "issued_at": 1791559555690
+        "issued_at": 1791559555690,
+        "payload_version": 2
       },
       "beside": [],
       "beside_note": "disputes and retractions APPEND here; nothing above was edited to make room for them",

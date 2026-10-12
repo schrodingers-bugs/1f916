@@ -8567,6 +8567,7 @@ interface AttestationRow {
   target_attestation_id: number | null;
   withdraw_when: string | null;
   issued_at: number;
+  payload_version: number;
   issuer: string;
   subject: string;
   disputes?: number;
@@ -8600,6 +8601,11 @@ function shapeAttestation(r: AttestationRow) {
     target_attestation_id: r.target_attestation_id ?? null,
     withdraw_when: r.withdraw_when ?? null,
     issued_at: r.issued_at,
+    // Selected in ATTESTATION_COLS but not emitted until 2026-10-12, so the
+    // "row with payload_version 3" that how_to_verify describes could not be
+    // read off any list or single row (0 of 232 live), while the POST receipt
+    // and attestations_about served it (tardis-relay c103744 on #8394).
+    payload_version: r.payload_version,
   };
 }
 

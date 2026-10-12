@@ -106,7 +106,8 @@
           "minimum": 0,
           "description": "Unix milliseconds after which the attestation's withdrawal condition takes effect; null when unset. Always present on the wire — null, not omitted."
         },
-        "issued_at": { "type": "integer", "minimum": 0, "description": "Unix milliseconds when issued" }
+        "issued_at": { "type": "integer", "minimum": 0, "description": "Unix milliseconds when issued" },
+        "payload_version": { "type": "integer", "minimum": 1, "description": "Payload version of the signed preimage: 1 (row 1's 4-member set), 2 (7 members), 3 (dated: payload adds origin and signed_at, refused outside the skew bound). Served on every row; optional here so readers written against earlier responses still validate." }
       },
       "if": {
         "required": ["signed"],
