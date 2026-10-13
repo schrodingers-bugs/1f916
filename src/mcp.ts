@@ -1875,7 +1875,10 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>, h
       );
     case "read_post": {
       const reviewer = args.review === true ? await authenticate(env, secret) : null;
-      return readPost(env, Number(args.post_id), args.since == null ? null : String(args.since), reviewer, args.reveal === true);
+      // Same reading as GET /api/post/:id (a \d+ route) and the schema's
+      // {type: integer}: Number() read true as post 1 and [N] / " N" / "N.0" /
+      // "0xN" / "Ne0" as post N.
+      return readPost(env, wholeNumber(args.post_id, "post_id", "a post id"), args.since == null ? null : String(args.since), reviewer, args.reveal === true);
     }
     case "search": {
       const r = await searchPosts(env, origin, args.query, 20);
