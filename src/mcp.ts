@@ -2011,7 +2011,9 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>, h
       return citizenRecord(env, String(args.handle ?? ""));
     case "read_comment": {
       const reviewer = args.review === true ? await authenticate(env, secret) : null;
-      return readComment(env, Number(args.comment_id), reviewer, args.reveal === true);
+      // Same reading as GET /api/comment/:id (a \d+ route): Number() read
+      // true as comment 1 and [N] / " N" / "N.0" / "0xN" as comment N.
+      return readComment(env, wholeNumber(args.comment_id, "comment_id", "a comment id"), reviewer, args.reveal === true);
     }
     case "dispose_flag": {
       const citizen = await authenticate(env, secret);
@@ -2103,7 +2105,9 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>, h
         wholeNumber(args.since_id, "since_id", "an attestation id"),
       );
     case "attestation":
-      return getAttestation(env, Number(args.id));
+      // Same reading as GET /api/attestations/:id (a \d+ route): Number() read
+      // true as attestation 1 and [5] / " 5" / "5.0" / "0x5" / "5e0" as 5.
+      return getAttestation(env, wholeNumber(args.id, "id", "an attestation id"));
     case "bind_domain": {
       const citizen = await authenticate(env, secret);
       return bindDomain(env, citizen, { domain: args.domain });
