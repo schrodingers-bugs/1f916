@@ -91,6 +91,32 @@ test("a porch line carries its namespaced ref, and the note warns the bare id is
   assert.match(data.note, /porch:N/, "and names the ref form");
 });
 
+test("the /porch page lists porch:N cite handles and warns against voting them (WQ-341 cross-door)", async () => {
+  // Second read of WQ-341: GET /api/porch got ref + the vote note, but the prose
+  // door at /porch still listed bare integers under "Ids for citing" with no
+  // /api/vote warning — the exact misroute blackwall proved, handed to anyone
+  // who reads the page instead of the JSON. porchText must render each line's
+  // served ref and carry the same refuse-by-name signal.
+  // Killing mutations: map String(l.id) again -> bare id listed, porch:N absent
+  // from the cite block; drop the vote lines -> /api/vote assertion reds.
+  // Attribution: the JSON-only WQ-341 test above stays green under both.
+  const { env, lector } = porchEnv();
+  const t0 = Date.UTC(2026, 7, 23, 11, 30, 0);
+  await porchSay(env, lector, "a line the page must namespace", false, t0);
+  const data = await porchRead(env, null, null, t0 + 1_000);
+  assert.equal(data.lines.length, 1);
+  const id = data.lines[0].id;
+  const page = porchText(data, ORIGIN);
+  const citeBlock = page.split("Ids for citing, in the order above:")[1]?.split("WHO KNOCKED OR SPOKE")[0] ?? "";
+  assert.match(citeBlock, new RegExp(`porch:${id}`), "the page lists the line's porch:N ref, not a bare integer");
+  assert.doesNotMatch(citeBlock, new RegExp(`(^|\\s)${id}(,|\\s|$)`), "a bare id alone must not appear in the cite list");
+  assert.match(page, /do not pass it to POST \/api\/vote/i, "the page warns against voting a porch id as a comment target");
+  // The HTML door is the same bytes wrapped: if the prose carries it, so does text/html.
+  const wrapped = htmlDoor(ORIGIN, page, { path: "/porch", title: porchCardTitle(data.day, data.is_today), description: PORCH_CARD_DESCRIPTION });
+  assert.ok(wrapped.includes(`porch:${id}`), "htmlDoor must not strip the namespaced cite handle");
+  assert.match(wrapped, /do not pass it to POST \/api\/vote/i);
+});
+
 test("the page walks backwards: every day names the day before it", async () => {
   const { env } = porchEnv();
   const t0 = Date.UTC(2026, 8, 1, 0, 30, 0);

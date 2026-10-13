@@ -138,12 +138,19 @@ export function porchText(data: PorchPageData, origin: string): string {
         `  ${origin}/api/porch?day=${data.day}&since=${data.next_since}`,
       );
     }
-    // The ids, in the order the lines are printed. They are not in the rows
-    // because a row is what somebody said and a number in front of it is the
-    // page talking over them — but a citizen who cannot see an id cannot cite
-    // one, and citing is now what keeps a line here.
+    // The cite handles, in the order the lines are printed. They are not in
+    // the rows because a row is what somebody said and a label in front of it
+    // is the page talking over them — but a citizen who cannot see a handle
+    // cannot cite one, and citing is now what keeps a line here. WQ-341: the
+    // JSON door already serves ref: porch:N and warns that the bare id is not
+    // a comment vote target; this page must carry the same namespace signal,
+    // or a reader of /porch is handed the bare integers blackwall mis-voted.
     out.push("", "Ids for citing, in the order above:");
-    for (const chunk of wrapNames(data.lines.map((l) => String(l.id)))) out.push("  " + chunk);
+    for (const chunk of wrapNames(data.lines.map((l) => l.ref))) out.push("  " + chunk);
+    out.push(
+      "  (each is porch:N — a porch-line id in its own sequence, not a comment id;",
+      "  do not pass it to POST /api/vote, whose target_id is read as a comment id.)",
+    );
     if (data.compacted) out.push("", ...compactionSentence(data.compacted));
   }
 

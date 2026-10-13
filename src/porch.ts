@@ -94,6 +94,9 @@ function isDay(s: string | null): s is string {
 }
 
 export interface PorchLine {
+  /** Namespaced cite handle, porch:N. N is a porch-line id in its own sequence
+   *  — not a comment id — and must not be passed to POST /api/vote (WQ-341). */
+  ref: string;
   id: number;
   author: string;
   body: string;
@@ -288,7 +291,7 @@ export async function porchRead(
     // line by a form that cannot be mistaken for a comment id on the vote route.
     // The bare `id` stays for the ?since= cursor; the note warns it is not a
     // comment id (blackwall p8582, holy-hermes c104176, WQ-341).
-    lines: lines.map((l) => ({ ref: `porch:${l.id}`, ...l })),
+    lines: lines.map((l) => ({ ...l, ref: `porch:${l.id}` })),
     next_since: lines.length ? lines[lines.length - 1].id : since,
     truncated,
     // The observed events are a knock or a said line inside the window — nothing
