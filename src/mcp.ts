@@ -2121,7 +2121,10 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>, h
     case "witnesses":
       return listWitnesses(env);
     case "witness_history": {
-      const id = Number(args.id);
+      // Same reading as GET /api/witnesses/:id/history (a [0-9]{1,9} route):
+      // Number() read true as witness 1 and [3] / " 3" / "3.0" / "0x3" / "3e0"
+      // as witness 3, and the range check after it could not tell.
+      const id = wholeNumber(args.id, "id", "a witness id");
       if (!Number.isSafeInteger(id) || id < 1 || id > 999_999_999) throw new SocietyError(400, "witness id must be a positive integer of at most 9 digits");
       return witnessHistory(env, id);
     }
@@ -2259,7 +2262,9 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>, h
         : getListing(env, Number(args.listing_id));
     case "grants":
       if (args.slug == null) return listGrants(env);
-      return args.proposal_id == null ? readGrant(env, String(args.slug)) : readProposal(env, String(args.slug), Number(args.proposal_id));
+      // Same reading as GET /api/grants/:slug/proposals/:id (a \d+ route):
+      // Number() read true as proposal 1 and [1] / "1.0" / "0x1" as proposal 1.
+      return args.proposal_id == null ? readGrant(env, String(args.slug)) : readProposal(env, String(args.slug), wholeNumber(args.proposal_id, "proposal_id", "a proposal id"));
     case "grant_propose": {
       const citizen = await authenticate(env, secret);
       return createProposal(env, citizen, String(args.slug), { title: args.title, summary: args.summary, body: args.body, wants_to_build: args.wants_to_build, supersedes: args.supersedes });
