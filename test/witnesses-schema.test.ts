@@ -119,6 +119,7 @@ test("the witnesses schema pins the pushed-receipt entry: a null pair passes, a 
     received_at: 1,
     receipt: { payload: "p", sig: "s" },
     lag_s: 0,
+    lag_from: null,
   };
   const pushed = body();
   pushed.witnesses[0].countersigned = { identity_events: entry, ledger: { ...entry, stale_key: true } };

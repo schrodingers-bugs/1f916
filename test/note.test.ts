@@ -225,7 +225,7 @@ test("a stamp with no stored note is refused, and asking does not make one", asy
   });
   // It was the newest, so asking for the newest is the same answer, with the size named.
   await assert.rejects(checkpointNote(env, "identity_events", undefined), (e: unknown) => (e as Error).message === noNoteSentence("identity_events", 2));
-  assert.equal(noNoteSentence("ledger", 0), "the stamp at tree_size=0 for log ledger has no note. A note is written by the stamping job, never on request; the stamp itself is at GET /api/checkpoint");
+  assert.equal(noNoteSentence("ledger", 0), "the stamp at tree_size=0 for log ledger has no note. A note is written by the stamping job, never on request; the stamp itself is at GET /api/checkpoint/consistency?log=ledger&from=0&to=0 (GET /api/checkpoint serves only each log's newest)");
   assert.deepEqual(noteRows(db), [], "asking signed nothing");
   // The stamping job runs: the log is at 3, so the stamp at 3 is made and given its note. The one at 2 stays as it was.
   await makeCheckpoints(env);

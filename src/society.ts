@@ -1,7 +1,7 @@
 // The society's rules and records. Every door (JSON API, MCP) calls into here.
 import { WITNESS_CADENCE, WITNESS_STANDING } from "./witness-cadence.ts";
 import { listingClockPreview, type ListingClockQuery } from "./listing-clock-preview.ts";
-import { lagSeconds, latestCountersignatures } from "./witness-push.ts";
+import { lagFrom, lagSecondsFrom, latestCountersignatures } from "./witness-push.ts";
 
 import { WITNESS_COUNTERSIGNATURE_NOTE, WITNESS_COUNTERSIGNATURE_PAYLOAD_FORMAT, appendChained, appendChainedStmt, attest, chainRecipe, isChainRaceViolation, sha256Hex, type ChainGuard, type WitnessParams } from "./chain.ts";
 import { conductLedger } from "./conduct.ts";
@@ -9248,7 +9248,7 @@ export const WITNESS_DIRECTORY_PAGE = 100;
 // the only way the registry learns what a witness has signed, and this note
 // says how a reader checks the lag it derives from that.
 export const WITNESS_COUNTERSIGNED_NOTE =
-  "`countersigned` is the newest countersignature each witness POSTed to this registry, per log, or null when it pushed none for that log. Null is not a verdict: pushing is optional and the registry never fetches a witness's file. `lag_s` is whole seconds from the created_at of the OLDEST checkpoint of that log with a tree_size larger than the pushed row's, to `now`; it is 0 when there is no such checkpoint, because a quiet log is not a dead witness. Recompute it from GET /api/checkpoint: find the first checkpoint of that log past the row's tree_size and subtract its created_at from `now`. The one value you cannot recompute is `received_at`, when the registry took the push: `receipt` is the registry's Ed25519 signature over it (payload prefix 1f916.witness-receipt.v1), verifiable against registry_public_key. `stale_key: true` means the row was pushed under an earlier key epoch than the witness's current `epoch`; read it as history, not as the current key's word. `lag_s` and these labels are a cache; the row (tree_size, root, witness_sig) is the proof, and witness_sig verifies under the witness's public_key over the countersignature_payload_format preimage.";
+  "`countersigned` is the newest countersignature each witness POSTed to this registry, per log, or null when it pushed none for that log. Null is not a verdict: pushing is optional and the registry never fetches a witness's file. `lag_s` is whole seconds from the created_at of the OLDEST checkpoint of that log with a tree_size larger than the pushed row's, to `now`; it is 0 when there is no such checkpoint, because a quiet log is not a dead witness. `lag_from` names that checkpoint ({tree_size, created_at}), or is null when lag_s is 0. Recompute lag_s from it, not from GET /api/checkpoint, which serves only each log's newest head and so finds the first checkpoint past the row only when that is the newest: GET /api/checkpoint/consistency?log=<log>&from=<tree_size>&to=<lag_from.tree_size> serves that checkpoint signed, created_at inside its signed payload, with the proof that the log only appended since the row; floor((now - its created_at) / 1000) is lag_s. That no checkpoint lands between the two is checkable at the same door: every size in between answers 404. The one value you cannot recompute is `received_at`, when the registry took the push: `receipt` is the registry's Ed25519 signature over it (payload prefix 1f916.witness-receipt.v1), verifiable against registry_public_key. `stale_key: true` means the row was pushed under an earlier key epoch than the witness's current `epoch`; read it as history, not as the current key's word. `lag_s` and these labels are a cache; the row (tree_size, root, witness_sig) is the proof, and witness_sig verifies under the witness's public_key over the countersignature_payload_format preimage.";
 
 export async function listWitnesses(env: Env, nowMs: number = Date.now()) {
   const { results } = await env.DB.prepare(
@@ -9281,9 +9281,14 @@ export async function listWitnesses(env: Env, nowMs: number = Date.now()) {
       const entry = async (log: "identity_events" | "ledger") => {
         const c = mine[log];
         if (!c) return null;
+        const from = await lagFrom(env, log, c.tree_size);
         return {
           ...c,
-          lag_s: await lagSeconds(env, log, c.tree_size, nowMs),
+          lag_s: lagSecondsFrom(from, nowMs),
+          // The stamp lag_s counts from, so the recipe in the note can be run:
+          // no public read lists stamps, and GET /api/checkpoint serves only
+          // the newest head.
+          lag_from: from,
           // The key rotated after this row was pushed: it is the earlier
           // key's word, not the current key's.
           ...(c.witness_epoch < row.epoch ? { stale_key: true } : {}),

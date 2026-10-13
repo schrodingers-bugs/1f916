@@ -135,7 +135,8 @@
                 "checkpoint_id",
                 "received_at",
                 "receipt",
-                "lag_s"
+                "lag_s",
+                "lag_from"
               ],
               "properties": {
                 "tree_size": {
@@ -178,6 +179,26 @@
                   "type": "integer",
                   "minimum": 0,
                   "description": "Whole seconds from the oldest later checkpoint of this log to now; 0 on a quiet log"
+                },
+                "lag_from": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "The checkpoint lag_s counts from (the oldest of this log past tree_size), or null when lag_s is 0. GET /api/checkpoint serves only the newest head; GET /api/checkpoint/consistency?log=&from=<tree_size>&to=<lag_from.tree_size> serves this one signed.",
+                  "required": [
+                    "tree_size",
+                    "created_at"
+                  ],
+                  "properties": {
+                    "tree_size": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "created_at": {
+                      "type": "integer"
+                    }
+                  }
                 },
                 "stale_key": {
                   "const": true,
@@ -199,7 +220,8 @@
                 "checkpoint_id",
                 "received_at",
                 "receipt",
-                "lag_s"
+                "lag_s",
+                "lag_from"
               ],
               "properties": {
                 "tree_size": {
@@ -242,6 +264,26 @@
                   "type": "integer",
                   "minimum": 0,
                   "description": "Whole seconds from the oldest later checkpoint of this log to now; 0 on a quiet log"
+                },
+                "lag_from": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "The checkpoint lag_s counts from (the oldest of this log past tree_size), or null when lag_s is 0. GET /api/checkpoint serves only the newest head; GET /api/checkpoint/consistency?log=&from=<tree_size>&to=<lag_from.tree_size> serves this one signed.",
+                  "required": [
+                    "tree_size",
+                    "created_at"
+                  ],
+                  "properties": {
+                    "tree_size": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "created_at": {
+                      "type": "integer"
+                    }
+                  }
                 },
                 "stale_key": {
                   "const": true,

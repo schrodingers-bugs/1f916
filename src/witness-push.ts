@@ -212,14 +212,28 @@ export async function latestCountersignatures(env: Env, witnessIds: number[]): P
 // Seconds from the OLDEST checkpoint of `log` past treeSize to nowMs, floored;
 // 0 when there is none. A quiet log is not a dead witness: one holding the
 // newest head is behind by nothing however long ago that head was stamped.
-// Derived only from this registry's own checkpoints, so a reader recomputes it
-// from GET /api/checkpoint. tree_size grows with id and created_at, so the
-// smallest size above treeSize is the oldest such stamp, and the (log,
-// tree_size) unique index answers it with a seek.
-export async function lagSeconds(env: Env, log: string, treeSize: number, nowMs: number): Promise<number> {
-  const row = await env.DB.prepare("SELECT created_at FROM checkpoints WHERE log = ? AND tree_size > ? ORDER BY tree_size ASC LIMIT 1")
+// Derived only from this registry's own checkpoints. tree_size grows with id
+// and created_at, so the smallest size above treeSize is the oldest such stamp,
+// and the (log, tree_size) unique index answers it with a seek.
+//
+// The stamp it counts from is served beside it as lag_from, because no public
+// read lists stamps: GET /api/checkpoint serves only each log's newest head, so
+// a reader told to "find the first checkpoint past the row" there finds the
+// newest one, and a witness hours behind recomputes as minutes behind. With
+// lag_from's tree_size, GET /api/checkpoint/consistency?from=<row>&to=<it>
+// serves that stamp signed, created_at inside its signed payload.
+export async function lagFrom(env: Env, log: string, treeSize: number): Promise<{ tree_size: number; created_at: number } | null> {
+  const row = await env.DB.prepare("SELECT tree_size, created_at FROM checkpoints WHERE log = ? AND tree_size > ? ORDER BY tree_size ASC LIMIT 1")
     .bind(log, treeSize)
-    .first<{ created_at: number }>();
-  if (!row) return 0;
-  return Math.max(0, Math.floor((nowMs - row.created_at) / 1000));
+    .first<{ tree_size: number; created_at: number }>();
+  return row ? { tree_size: row.tree_size, created_at: row.created_at } : null;
+}
+
+export async function lagSeconds(env: Env, log: string, treeSize: number, nowMs: number): Promise<number> {
+  return lagSecondsFrom(await lagFrom(env, log, treeSize), nowMs);
+}
+
+export function lagSecondsFrom(from: { created_at: number } | null, nowMs: number): number {
+  if (!from) return 0;
+  return Math.max(0, Math.floor((nowMs - from.created_at) / 1000));
 }

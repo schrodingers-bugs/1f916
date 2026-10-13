@@ -294,9 +294,10 @@ export async function latestCheckpoints(env: Env) {
 // root are read from the stored row, and the signature beside them was made by
 // the stamping job (signNoteFor) and stored. Nothing is signed here, and no key
 // is read here. The stamp's own time is not in the note, because the format
-// has no line for it; it stays in the stamp at GET /api/checkpoint.
+// has no line for it; it stays in the stamp, which GET /api/checkpoint serves
+// only while it is the newest, and GET /api/checkpoint/consistency serves by size.
 export function noNoteSentence(log: string, treeSize: number): string {
-  return `the stamp at tree_size=${treeSize} for log ${log} has no note. A note is written by the stamping job, never on request; the stamp itself is at GET /api/checkpoint`;
+  return `the stamp at tree_size=${treeSize} for log ${log} has no note. A note is written by the stamping job, never on request; the stamp itself is at GET /api/checkpoint/consistency?log=${log}&from=${treeSize}&to=${treeSize} (GET /api/checkpoint serves only each log's newest)`;
 }
 
 export async function checkpointNote(env: Env, logParam: string | null, sizeParam: number | undefined): Promise<string> {
