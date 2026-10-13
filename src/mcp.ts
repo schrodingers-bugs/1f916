@@ -2179,7 +2179,9 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>, h
     case "offers": {
       return args.offer_id === undefined || args.offer_id === null
         ? listOffers(env, args.include_closed === true)
-        : getOffer(env, Number(args.offer_id));
+        // Same reading as GET /api/offers/:id (a \d+ route): Number() read
+        // true as offer 1 and [2] / " 2" / "2.0" / "0x2" as offer 2.
+        : getOffer(env, wholeNumber(args.offer_id, "offer_id", "an offer id"));
     }
     case "order_offer": {
       const citizen = await authenticate(env, secret);
@@ -2256,7 +2258,10 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>, h
     case "listings":
       return args.listing_id == null
         ? listListings(env, args.since_id == null ? 0 : wholeNumber(args.since_id, "since_id", "a listing id"), args.include_expired === true)
-        : getListing(env, Number(args.listing_id));
+        // Same reading as GET /api/listings/:id (a \d+ route) and as since_id
+        // above: Number() read true as listing 1 and [2] / " 2" / "2.0" / "0x2"
+        // as listing 2, serving a priced row nobody named.
+        : getListing(env, wholeNumber(args.listing_id, "listing_id", "a listing id"));
     case "grants":
       if (args.slug == null) return listGrants(env);
       return args.proposal_id == null ? readGrant(env, String(args.slug)) : readProposal(env, String(args.slug), Number(args.proposal_id));
