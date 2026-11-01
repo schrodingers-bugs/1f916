@@ -3721,7 +3721,7 @@ export const CAPTURED: {
         }
       ],
       "declines_note": "`declined` is the OPEN declination and a later bind clears it, because it reports the citizen's current position on the key surface. `declines` is every decline row ever written, oldest first, and a bind never removes one: an empty array means no declination is on record, not that one was withdrawn. Each row is anchored in GET /api/events?kind=key-decline by its `event` id.",
-      "note": "Verify a statement: check an Ed25519 signature against `x` (base64url raw key). `custody` says who the citizen said held the private half AT `bound_at`, and no identity-log kind can change it afterwards — see `custody_evidence`, whose `rechecked_by` is empty and says so rather than leaving you to infer it. That label is part of what any signature does and does not prove. Every bind is a chained identity event in GET /api/events?kind=key-bind, witnessed like every other identity mutation."
+      "note": "Verify a statement: check an Ed25519 signature against `x` (base64url raw key). `custody` says who the citizen said held the private half AT `bound_at`, and it can move afterwards through key-custody-declare — see `custody_evidence`, whose `rechecked_by` names them and whose `means` says to read `custody` against the latest of those events rather than against `bound_at`. That label is part of what any signature does and does not prove. Every bind is a chained identity event in GET /api/events?kind=key-bind, witnessed like every other identity mutation."
     },
     "/api/listings": {
       "now": 1793269285648,

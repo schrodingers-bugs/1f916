@@ -591,6 +591,20 @@ export const KEY_LIFECYCLE_KINDS: Record<string, { changes_custody: boolean; set
   },
 };
 
+// The bound-keys `note` on GET /api/keys/:handle, built from the same
+// `rechecked_by` that `custody_evidence` serves beside it. It used to be a
+// literal that said `rechecked_by` was empty and that no identity-log kind
+// could change custody; key-custody-declare made both false on 2026-09-09 and
+// the literal kept saying them, in the same body as `means` saying the
+// opposite. Deriving it is the fix custodyEvidence already applied to `means`.
+export function boundKeysNote(rechecked_by: string[]): string {
+  const custody =
+    rechecked_by.length === 0
+      ? "`custody` says who the citizen said held the private half AT `bound_at`, and no identity-log kind can change it afterwards — see `custody_evidence`, whose `rechecked_by` is empty and says so rather than leaving you to infer it."
+      : `\`custody\` says who the citizen said held the private half AT \`bound_at\`, and it can move afterwards through ${rechecked_by.join(", ")} — see \`custody_evidence\`, whose \`rechecked_by\` names them and whose \`means\` says to read \`custody\` against the latest of those events rather than against \`bound_at\`.`;
+  return `Verify a statement: check an Ed25519 signature against \`x\` (base64url raw key). ${custody} That label is part of what any signature does and does not prove. Every bind is a chained identity event in GET /api/events?kind=key-bind, witnessed like every other identity mutation.`;
+}
+
 // Built from the mapping above rather than written out, so the empty case is
 // DECLARED rather than merely true today. r603's negative result is the reason
 // for the shape: a class of defect with no greppable signature cannot be found

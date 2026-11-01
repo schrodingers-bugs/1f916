@@ -168,6 +168,9 @@ test("GET /api/keys/:handle serves ended_at on every key, rotated_to on the rota
   assert.equal(after.signature_validity.dated_preimages.key_rotate, "1f916.key-rotate.v1:1f916.ai:<handle>:<old_thumbprint>:<new_thumbprint>:<signed_at>");
   assert.equal(after.signature_validity.dated_preimages.seal_check, "1f916.seal-check.v1:1f916.ai:<handle>:<label>:<hash>:<signed_at>");
   assert.ok(after.custody_evidence && "key-rotate" in after.custody_evidence.kinds, "the new kind answers the custody question");
+  // The served note and the served list must not disagree in one body (the note said "empty" while rechecked_by named key-custody-declare).
+  for (const k of after.custody_evidence!.rechecked_by) assert.ok(String(after.note).includes(k), `served note names ${k}`);
+  assert.doesNotMatch(String(after.note), /`rechecked_by` is empty/);
 });
 
 // The registry's word is not the evidence: the log row carries the message and

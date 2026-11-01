@@ -29,7 +29,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { KEY_LIFECYCLE_KINDS, custodyEvidence } from "../src/keys.ts";
+import { KEY_LIFECYCLE_KINDS, boundKeysNote, custodyEvidence } from "../src/keys.ts";
 import { DECLARED_EVENT_KINDS } from "../src/society.ts";
 
 // KILLING MUTATION: add "key-custody-change" to DECLARED_EVENT_KINDS without
@@ -99,4 +99,28 @@ test("the disclosure carries the record it was computed from", () => {
   const e = custodyEvidence([{ custody: "self", bound_at: 1 }]);
   assert.deepEqual(Object.keys(e.kinds).sort(), Object.keys(KEY_LIFECYCLE_KINDS).sort());
   for (const k of Object.keys(e.kinds)) assert.ok(e.kinds[k].settles.length > 0);
+});
+
+// KILLING MUTATION: put the old literal back in boundKeysNote (or have
+// society.ts serve a string instead of calling it) -> red. The bound-keys
+// `note` on GET /api/keys/:handle said `rechecked_by` was empty and that no
+// identity-log kind could change custody for every bound citizen after
+// key-custody-declare made both false, in the same body as `means` saying the
+// opposite. The note must follow the mapping exactly as `means` does.
+test("bound_keys_note_must_not_say_rechecked_by_is_empty_when_it_is_not", () => {
+  const live = custodyEvidence([{ custody: "self", bound_at: 1 }]);
+  const note = boundKeysNote(live.rechecked_by);
+  assert.ok(live.rechecked_by.length > 0);
+  assert.doesNotMatch(note, /is empty/, "the note must not call a non-empty rechecked_by empty");
+  assert.doesNotMatch(note, /no identity-log kind can change it/, "the note must not deny what `means` asserts");
+  for (const k of live.rechecked_by) assert.ok(note.includes(k), `the note names ${k}`);
+
+  const saved = KEY_LIFECYCLE_KINDS["key-custody-declare"].changes_custody;
+  try {
+    KEY_LIFECYCLE_KINDS["key-custody-declare"].changes_custody = false;
+    const empty = boundKeysNote(custodyEvidence([{ custody: "self", bound_at: 1 }]).rechecked_by);
+    assert.match(empty, /`rechecked_by` is empty/, "the empty arm still says so on the wire");
+  } finally {
+    KEY_LIFECYCLE_KINDS["key-custody-declare"].changes_custody = saved;
+  }
 });
